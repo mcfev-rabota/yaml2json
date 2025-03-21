@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML to JSON Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        button {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>YAML to JSON Converter</h1>
+    
+    <label for="inputYaml">Input YAML:</label>
+    <textarea id="inputYaml" placeholder="Paste YAML here..."></textarea>
+    
+    <button onclick="convertYamlToJson()">Convert</button>
+    
+    <label for="outputJson">Output JSON:</label>
+    <textarea id="outputJson" placeholder="JSON output will appear here..."></textarea>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script>
+        function convertYamlToJson() {
+            try {
+                const inputYaml = document.getElementById('inputYaml').value;
+                const yamlObject = jsyaml.load(inputYaml);
+
+                const schemaReferences = extractSchemaReferences(yamlObject);
+                replaceRefs(yamlObject, schemaReferences);
+
+                const outputJson = JSON.stringify(yamlObject, null, 4);
+                document.getElementById('outputJson').value = outputJson;
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function extractSchemaReferences(yamlObject) {
+            const schemas = {};
+
+            if (yamlObject.components && yamlObject.components.schemas) {
+                for (const schemaName in yamlObject.components.schemas) {
+                    schemas[`#/components/schemas/${schemaName}`] = yamlObject.components.schemas[schemaName];
+                }
+            }
+
+            return schemas;
+        }
+
+        function replaceRefs(obj, schemaReferences) {
+            if (typeof obj === 'object' && obj !== null) {
+                for (const key in obj) {
+                    if (key === '$ref' && typeof obj[key] === 'string') {
+                        const refValue = obj[key];
+                        if (schemaReferences[refValue]) {
+                            Object.assign(obj, schemaReferences[refValue]);
+                            delete obj['$ref'];
+                        }
+                    } else {
+                        replaceRefs(obj[key], schemaReferences);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
